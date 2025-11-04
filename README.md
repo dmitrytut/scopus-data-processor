@@ -72,8 +72,9 @@ A web application for processing Scopus export data for the given Affiliation. A
 ### Department Mapping File
 - **Format:** Excel (.xlsx)
 - **Columns:**
-  - `Author Name` - format: "LastName, F."
+  - `Author Name` - can contain either short ("LastName, F.") or full ("LastName, FirstName") format
   - `Departament` - department name
+- **Note:** Search works with both short and full name formats automatically
 
 ## Output
 

@@ -158,42 +158,62 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
     }
 
 
-def map_departments(authors_string, df_dept_mapping):
+def map_departments(authors_info, df_dept_mapping):
     """
-    Сопоставляет авторов с департаментами из справочника.
+    Maps authors to departments from the reference file.
 
-    Параметры:
-    - authors_string: строка с авторами, разделенными "; " (например, "LastName, F.; LastName2, F.")
-    - df_dept_mapping: DataFrame со справочником (колонки: 'Author Name', 'Departament')
-
-    Возвращает:
-    - dict с информацией:
+    Parameters:
+    - authors_info: dict with author information from extract_affiliation_authors():
         {
-            'department': строка с департаментом(ами) через "; "
-            'needs_highlight': bool - нужна ли желтая подсветка
-            'reason': причина подсветки ('not_found', 'multiple', None)
+            'authors_short': 'LastName, F.; LastName2, F.',
+            'authors_full': 'Full Name; Full Name2',
+            ...
+        }
+    - df_dept_mapping: DataFrame with mapping (columns: 'Author Name', 'Departament')
+        Note: 'Author Name' can contain both short and full name formats
+
+    Returns:
+    - dict with information:
+        {
+            'department': string with department(s) separated by "; "
+            'needs_highlight': bool - whether yellow highlighting is needed
+            'reason': highlighting reason ('not_found', 'multiple', None)
         }
     """
-    if pd.isna(authors_string) or not authors_string.strip():
+    authors_short_str = authors_info.get('authors_short', '')
+    authors_full_str = authors_info.get('authors_full', '')
+
+    if not authors_short_str or not authors_short_str.strip():
         return {'department': '', 'needs_highlight': False, 'reason': None}
 
-    # Разбиваем на отдельных авторов
-    authors = [a.strip() for a in str(authors_string).split(';') if a.strip()]
+    # Split into individual authors
+    authors_short = [a.strip() for a in str(authors_short_str).split(';') if a.strip()]
+    authors_full = [a.strip() for a in str(authors_full_str).split(';') if a.strip()]
+
+    # Ensure lists have same length
+    while len(authors_full) < len(authors_short):
+        authors_full.append('')
 
     departments = []
     not_found_authors = []
 
-    for author in authors:
-        # Ищем автора в справочнике (нечувствительно к регистру)
+    for short_name, full_name in zip(authors_short, authors_full):
+        # Search in mapping (case-insensitive) - try both short and full names
         matches = df_dept_mapping[
-            df_dept_mapping['Author Name'].str.lower() == author.lower()
+            df_dept_mapping['Author Name'].str.lower() == short_name.lower()
         ]
 
+        # If not found by short name, try full name
+        if len(matches) == 0 and full_name:
+            matches = df_dept_mapping[
+                df_dept_mapping['Author Name'].str.lower() == full_name.lower()
+            ]
+
         if len(matches) == 0:
-            # Автор не найден
-            not_found_authors.append(author)
+            # Author not found
+            not_found_authors.append(short_name)
         else:
-            # Автор найден, извлекаем департамент(ы)
+            # Author found, extract department(s)
             for _, row in matches.iterrows():
                 dept = row['Departament']
                 if pd.notna(dept) and dept.strip():
@@ -328,7 +348,7 @@ def process_scopus_data(df_source, df_existing, df_dept_mapping,
         stats['affiliated_articles'] += 1
 
         # Сопоставить департаменты
-        dept_info = map_departments(authors_info['authors_short'], df_dept_mapping)
+        dept_info = map_departments(authors_info, df_dept_mapping)
 
         if dept_info['needs_highlight']:
             stats['highlighted_depts'] += 1

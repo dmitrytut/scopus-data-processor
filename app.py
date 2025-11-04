@@ -78,7 +78,7 @@ with st.sidebar:
     dept_file = st.file_uploader(
         "Department Mapping File",
         type=['xlsx', 'xls'],
-        help="Upload file with author-department mapping"
+        help="Upload file with author-department mapping. Columns: 'Author Name' (short or full format), 'Departament'"
     )
 
     st.markdown("---")
