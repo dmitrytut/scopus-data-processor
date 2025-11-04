@@ -2,6 +2,8 @@
 
 A web application for processing Scopus export data for the given Affiliation. Automatically identifies new articles, extracts affiliated authors, and maps them to departments.
 
+🌐 **[Try Online Version](https://scopus-khazar.streamlit.app/)**
+
 ## Features
 
 - ✓ **Automated duplicate detection** using fuzzy matching
