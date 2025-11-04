@@ -9,6 +9,8 @@ from openpyxl.styles import PatternFill
 from datetime import datetime
 
 
+# TODO: Department из Author affiliations
+
 def normalize_title(title):
     """
     Нормализует название статьи для сравнения.
@@ -71,7 +73,7 @@ def find_new_articles(df_source, df_existing, threshold=95):
     return df_new, duplicates_info
 
 
-def extract_affiliation_authors(authors_with_affiliations, author_full_names, keywords):
+def extract_affiliation_authors(authors_with_affiliations, author_full_names, keywords, exclude_keywords=None):
     """
     Извлекает авторов из строки с аффилиациями, в именах которых есть слова из `keywords`.
 
@@ -79,6 +81,7 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
     - authors_with_affiliations: строка "LastName, FirstName, affiliation; LastName, FirstName, affiliation; ..."
     - author_full_names: строка с полными именами и ID "Name (ID); Name (ID); ..."
     - keywords: список ключевых слов для поиска университета
+    - exclude_keywords: список ключевых слов для исключения из результатов (опционально)
 
     Возвращает:
     - dict с информацией об авторах искомых аффиляций:
@@ -125,6 +128,12 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
 
         # Проверяем, содержит ли блок ключевые слова нужной аффиляции
         is_affiliated = any(keyword.lower() in block.lower() for keyword in keywords)
+
+        # Проверяем исключения
+        if is_affiliated and exclude_keywords:
+            is_excluded = any(exclude_keyword.lower() in block.lower() for exclude_keyword in exclude_keywords)
+            if is_excluded:
+                is_affiliated = False
 
         if is_affiliated:
             # Извлекаем имя автора (формат: "LastName, FirstName, affiliation, affiliation, ...")
@@ -247,7 +256,7 @@ def map_departments(authors_info, df_dept_mapping):
 
 def process_scopus_data(df_source, df_existing, df_dept_mapping,
                        threshold=95, year=None, title_exclude_keywords=None,
-                       affiliation_keywords=None):
+                       affiliation_keywords=None, affiliation_exclude_keywords=None):
     """
     Основной pipeline обработки данных Scopus.
 
@@ -262,6 +271,7 @@ def process_scopus_data(df_source, df_existing, df_dept_mapping,
         list - несколько лет (например, [2024, 2025])
     - title_exclude_keywords: список подстрок для исключения статей по Title (case-insensitive)
     - affiliation_keywords: список ключевых слов для поиска авторов из аффилированных учреждений
+    - affiliation_exclude_keywords: список ключевых слов для исключения из результатов поиска аффилиаций
 
     Возвращает:
     - df_result: DataFrame с новыми статьями в формате United
@@ -337,7 +347,8 @@ def process_scopus_data(df_source, df_existing, df_dept_mapping,
         authors_info = extract_affiliation_authors(
             row['Authors with affiliations'],
             row['Author full names'],
-            affiliation_keywords
+            affiliation_keywords,
+            affiliation_exclude_keywords
         )
 
         # Пропустить статьи без авторов аффиляцией

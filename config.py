@@ -7,10 +7,12 @@ DEFAULT_FUZZY_MATCH_THRESHOLD = 90  # Порог совпадения для fuz
 
 # Ключевые слова для поиска аффиляций пользователя
 AFFILIATION_KEYWORDS = [
-    'Khazar University',
     'Khazar',
     'Xəzər Universiteti'
 ]
+
+# Ключевые слова для исключения из результатов поиска аффиляций
+AFFILIATION_EXCLUDE_KEYWORDS = ['Khazar Institute of']
 
 # Подстроки для исключения статей по Title (по умолчанию пусто)
 DEFAULT_TITLE_EXCLUDE_KEYWORDS = ['Correction:', 'Correction to:', 'Erratum to', 'Corrigendum to', '<FOR VERIFICATION>']

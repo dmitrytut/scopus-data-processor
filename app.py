@@ -10,6 +10,7 @@ import os
 from config import (
     DEFAULT_FUZZY_MATCH_THRESHOLD,
     AFFILIATION_KEYWORDS,
+    AFFILIATION_EXCLUDE_KEYWORDS,
     DEFAULT_TITLE_EXCLUDE_KEYWORDS,
     HIGHLIGHT_COLOR_MULTIPLE_DEPTS,
     DEFAULT_UNITED_SHEET_NAME
@@ -99,6 +100,20 @@ with st.sidebar:
             if line.strip()
         ]
 
+    # Affiliation exclusion settings
+    affiliation_exclude_keywords = []
+    affiliation_exclude_keywords_text = st.text_area(
+        "Affiliation Exclusion Keywords (one per line)",
+        value='\n'.join(AFFILIATION_EXCLUDE_KEYWORDS),
+        height=100,
+        help="Authors from affiliations containing these keywords will be EXCLUDED from results"
+    )
+
+    if affiliation_exclude_keywords_text.strip():
+        affiliation_exclude_keywords = [
+            line.strip() for line in affiliation_exclude_keywords_text.split('\n')
+            if line.strip()
+        ]
 
     # Year filtering
     st.markdown("**Year Filtering**")
@@ -192,7 +207,8 @@ if process_button:
                     threshold=fuzzy_threshold,
                     year=selected_years if year_filter_enabled else None,
                     title_exclude_keywords=title_exclude_keywords if title_filter_enabled else None,
-                    affiliation_keywords=affiliation_keywords
+                    affiliation_keywords=affiliation_keywords,
+                    affiliation_exclude_keywords=affiliation_exclude_keywords
                 )
 
                 # Save to session state
