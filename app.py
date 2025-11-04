@@ -296,6 +296,7 @@ if st.session_state.processed and st.session_state.result_df is not None:
         # Download button
         st.download_button(
             label="📥 Download Excel with Results",
+            type="primary",
             data=output_buffer.getvalue(),
             file_name=output_filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
