@@ -75,13 +75,6 @@ with st.sidebar:
         help="Specify the sheet name to read from United file"
     )
 
-    # Department mapping file
-    dept_file = st.file_uploader(
-        "Department Mapping File",
-        type=['xlsx', 'xls'],
-        help="Upload file with author-department mapping. Columns: 'Author Name' (short or full format), 'Departament'"
-    )
-
     st.markdown("---")
     st.subheader("🔧 Processing Parameters")
 
@@ -187,11 +180,11 @@ if process_button:
                 # Load United
                 df_united = pd.read_excel(united_file, sheet_name=united_sheet_name)
 
-                # Load departments (if empty, create empty dataframe)
-                df_departments = pd.read_excel(dept_file) if dept_file else pd.DataFrame(columns=['Author Name', 'Departament'])
+                # Create empty departments dataframe (departments now extracted from affiliations)
+                df_departments = pd.DataFrame(columns=['Author Name', 'Departament'])
 
                 st.success(f"✅ Files loaded successfully")
-                st.info(f"📊 Scopus: {len(df_scopus)} articles | United: {len(df_united)} articles | Departments: {len(df_departments)} records")
+                st.info(f"📊 Scopus: {len(df_scopus)} articles | United: {len(df_united)} articles")
 
             except Exception as e:
                 st.error(f"❌ Error loading files: {str(e)}")
@@ -247,7 +240,7 @@ if st.session_state.processed and st.session_state.result_df is not None:
 
     with col4:
         st.metric("Require Review", stats['highlighted_depts'])
-        st.caption("Departments not found / multiple")
+        st.caption("Department not found")
 
     # Additional statistics
     if stats.get('excluded_by_title', 0) > 0:
@@ -323,10 +316,10 @@ else:
     1. **Upload files:**
        - Scopus Export (source data from Scopus)
        - United database (existing articles)
-       - Department mapping file (Author Name → Department)
 
     2. **Configure parameters:**
        - Affiliation keywords (which institutions to search for)
+       - Affiliation exclusion keywords (optional - to filter out specific affiliations)
        - Year filter (optional)
        - Title exclusion keywords (Correction, Erratum, etc.)
        - Fuzzy Matching threshold (95%+ recommended)
@@ -338,6 +331,6 @@ else:
     **Output:**
     - New articles (not found in United database)
     - Only articles with affiliated authors
-    - Automatic department assignment
-    - Highlighting for cells requiring manual review
+    - Automatic department extraction from affiliation data
+    - Yellow highlighting for articles where department could not be extracted
     """)

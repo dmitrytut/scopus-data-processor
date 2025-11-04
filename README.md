@@ -49,7 +49,6 @@ A web application for processing Scopus export data for the given Affiliation. A
 1. **Upload files** in the sidebar:
    - Scopus Export file (source data)
    - United database file (existing articles)
-   - Department mapping file (author -> department)
 
 2. **Configure settings:**
    - Year filter (single or multiple years)
@@ -65,28 +64,20 @@ A web application for processing Scopus export data for the given Affiliation. A
 ### Scopus Export File
 - **Format:** Excel (.xlsx)
 - **Required columns:** Authors, Author full names, Authors with affiliations, Title, Year, Source title
+- **Note:** Department information is automatically extracted from the "Authors with affiliations" column
 
 ### United Database File
 - **Format:** Excel (.xlsx)
 - **Required columns:** Title, Year, Authors
 - **Sheet name:** Configurable (default: "Last")
 
-### Department Mapping File
-- **Format:** Excel (.xlsx)
-- **Columns:**
-  - `Author Name` - can contain either short ("LastName, F.") or full ("LastName, FirstName") format
-  - `Departament` - department name
-- **Note:** Search works with both short and full name formats automatically
-
 ## Output
 
 The application produces an Excel file with:
 - Only NEW articles (not found in United database)
 - Only articles with affiliated authors
-- Automatic department assignment
-- Highlighting for:
-  - Authors not found in department mapping
-  - Multiple departments detected
+- Automatic department extraction from affiliation data
+- Yellow highlighting for articles where department could not be extracted
 
 ## Tech Stack
 

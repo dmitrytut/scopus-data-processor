@@ -6,10 +6,7 @@ import re
 from fuzzywuzzy import fuzz
 import openpyxl
 from openpyxl.styles import PatternFill
-from datetime import datetime
 
-
-# TODO: Department из Author affiliations
 
 def normalize_title(title):
     """
@@ -89,11 +86,12 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
             'authors_short': 'LastName, F.; LastName2, F.',  # Краткие имена
             'authors_with_ids': 'Full Name (ID); Full Name2 (ID)',  # С ID
             'authors_full': 'Full Name; Full Name2',  # Полные имена
+            'departments': ['Dept1', 'Dept2'],  # Департаменты авторов (может быть пустая строка)
             'count': 2  # Количество авторов
         }
     """
     if pd.isna(authors_with_affiliations):
-        return {'authors_short': '', 'authors_with_ids': '', 'authors_full': '', 'count': 0}
+        return {'authors_short': '', 'authors_with_ids': '', 'authors_full': '', 'departments': [], 'count': 0}
 
     # Разбиваем на отдельных авторов (разделитель - точка с запятой)
     author_blocks = str(authors_with_affiliations).split(';')
@@ -101,6 +99,7 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
     affiliate_authors_short = []
     affiliate_authors_with_ids = []
     affiliate_authors_full = []
+    affiliate_authors_departments = []
 
     # Парсим author_full_names для получения ID
     full_names_dict = {}
@@ -140,6 +139,18 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
             # Имя автора - это первые две части до запятых
             parts = block.split(',')
             if len(parts) >= 2:
+                # Извлекаем департамент - то что идет перед найденным ключевым словом
+                department = ''
+                for keyword in keywords:
+                    # Ищем индекс части содержащей ключевое слово
+                    for idx, part in enumerate(parts):
+                        if keyword.lower() in part.lower():
+                            # Берем предыдущую часть как департамент
+                            if idx > 1:  # idx > 1 потому что 0 и 1 - это имя автора
+                                department = parts[idx - 1].strip()
+                            break
+                    if department:
+                        break
                 last_name = parts[0].strip()
                 first_name = parts[1].strip()
 
@@ -159,98 +170,15 @@ def extract_affiliation_authors(authors_with_affiliations, author_full_names, ke
                     affiliate_authors_with_ids.append(full_name)
                     affiliate_authors_full.append(full_name)
 
+                # Добавляем департамент
+                affiliate_authors_departments.append(department)
+
     return {
         'authors_short': '; '.join(affiliate_authors_short),
         'authors_with_ids': '; '.join(affiliate_authors_with_ids),
         'authors_full': '; '.join(affiliate_authors_full),
+        'departments': affiliate_authors_departments,
         'count': len(affiliate_authors_short)
-    }
-
-
-def map_departments(authors_info, df_dept_mapping):
-    """
-    Maps authors to departments from the reference file.
-
-    Parameters:
-    - authors_info: dict with author information from extract_affiliation_authors():
-        {
-            'authors_short': 'LastName, F.; LastName2, F.',
-            'authors_full': 'Full Name; Full Name2',
-            ...
-        }
-    - df_dept_mapping: DataFrame with mapping (columns: 'Author Name', 'Departament')
-        Note: 'Author Name' can contain both short and full name formats
-
-    Returns:
-    - dict with information:
-        {
-            'department': string with department(s) separated by "; "
-            'needs_highlight': bool - whether yellow highlighting is needed
-            'reason': highlighting reason ('not_found', 'multiple', None)
-        }
-    """
-    authors_short_str = authors_info.get('authors_short', '')
-    authors_full_str = authors_info.get('authors_full', '')
-
-    if not authors_short_str or not authors_short_str.strip():
-        return {'department': '', 'needs_highlight': False, 'reason': None}
-
-    # Split into individual authors
-    authors_short = [a.strip() for a in str(authors_short_str).split(';') if a.strip()]
-    authors_full = [a.strip() for a in str(authors_full_str).split(';') if a.strip()]
-
-    # Ensure lists have same length
-    while len(authors_full) < len(authors_short):
-        authors_full.append('')
-
-    departments = []
-    not_found_authors = []
-
-    for short_name, full_name in zip(authors_short, authors_full):
-        # Search in mapping (case-insensitive) - try both short and full names
-        matches = df_dept_mapping[
-            df_dept_mapping['Author Name'].str.lower() == short_name.lower()
-        ]
-
-        # If not found by short name, try full name
-        if len(matches) == 0 and full_name:
-            matches = df_dept_mapping[
-                df_dept_mapping['Author Name'].str.lower() == full_name.lower()
-            ]
-
-        if len(matches) == 0:
-            # Author not found
-            not_found_authors.append(short_name)
-        else:
-            # Author found, extract department(s)
-            for _, row in matches.iterrows():
-                dept = row['Departament']
-                if pd.notna(dept) and dept.strip():
-                    departments.append(dept.strip())
-
-    # Убираем дубликаты департаментов
-    departments = list(dict.fromkeys(departments))  # Сохраняет порядок
-
-    # Определяем нужна ли подсветка
-    needs_highlight = False
-    reason = None
-
-    if not_found_authors:
-        # Есть авторы без департаментов
-        needs_highlight = True
-        reason = 'not_found'
-    elif len(departments) > 1:
-        # Множественные департаменты
-        needs_highlight = True
-        reason = 'multiple'
-
-    department_str = '; '.join(departments) if departments else ''
-
-    return {
-        'department': department_str,
-        'needs_highlight': needs_highlight,
-        'reason': reason,
-        'not_found_authors': not_found_authors
     }
 
 
@@ -358,15 +286,22 @@ def process_scopus_data(df_source, df_existing, df_dept_mapping,
 
         stats['affiliated_articles'] += 1
 
-        # Сопоставить департаменты
-        dept_info = map_departments(authors_info, df_dept_mapping)
+        # Обработать департаменты из извлеченных данных
+        departments = authors_info['departments']
+        # Получить уникальные департаменты (исключая пустые для вывода)
+        unique_departments = list(dict.fromkeys([d for d in departments if d]))
+        department_str = '; '.join(unique_departments)
 
-        if dept_info['needs_highlight']:
+        # Проверить нужна ли подсветка (если есть пустые департаменты)
+        needs_highlight = '' in departments
+        highlight_reason = 'not_found' if needs_highlight else None
+
+        if needs_highlight:
             stats['highlighted_depts'] += 1
 
         # Сформировать запись
         result_row = {
-            'Departament': dept_info['department'],
+            'Departament': department_str,
             'Authors': authors_info['authors_short'],  # Только авторы из нужных аффилиаций
             'Authors.1': row['Authors'] if 'Authors' in row else '',  # ВСЕ авторы
             'Author full names': row['Author full names'] if 'Author full names' in row else '',  # ВСЕ полные имена
@@ -384,8 +319,8 @@ def process_scopus_data(df_source, df_existing, df_dept_mapping,
             'Data': '',
             'Amount': '',
             'Quartil': '',
-            '_highlight': dept_info['needs_highlight'],
-            '_highlight_reason': dept_info['reason']
+            '_highlight': needs_highlight,
+            '_highlight_reason': highlight_reason
         }
 
         result_data.append(result_row)
