@@ -2,3 +2,6 @@
 /.claude/
 /.venv/
 /models/
+.DS_Store
+/.idea
+/__pycache__
