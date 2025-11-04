@@ -3,7 +3,7 @@
 """
 
 # Настройки поиска
-DEFAULT_FUZZY_MATCH_THRESHOLD = 98  # Порог совпадения для fuzzy matching (0-100)
+DEFAULT_FUZZY_MATCH_THRESHOLD = 90  # Порог совпадения для fuzzy matching (0-100)
 
 # Ключевые слова для поиска аффиляций пользователя
 AFFILIATION_KEYWORDS = [
@@ -13,7 +13,7 @@ AFFILIATION_KEYWORDS = [
 ]
 
 # Подстроки для исключения статей по Title (по умолчанию пусто)
-DEFAULT_TITLE_EXCLUDE_KEYWORDS = ['Correction:', 'Correction to:', 'Erratum to', 'Corrigendum to']
+DEFAULT_TITLE_EXCLUDE_KEYWORDS = ['Correction:', 'Correction to:', 'Erratum to', 'Corrigendum to', '<FOR VERIFICATION>']
 
 # Настройки форматирования Excel
 HIGHLIGHT_COLOR_MULTIPLE_DEPTS = 'FFFF00'  # Желтый для множественных департаментов
